@@ -11,6 +11,7 @@ import com.typesafe.config.ConfigFactory;
 import scala.PartialFunction;
 import scala.runtime.BoxedUnit;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -32,15 +33,12 @@ public class WorkerActor extends AbstractActor {
     ActorSystem system = ActorSystem.create("ClusterSystem", config);
 
     system.actorOf(Props.create(WorkerActor.class), "worker");
-
-    system.actorOf(Props.create(MetricsListener.class), "metricsListener");
   }
 
   @Override
   public PartialFunction<Object, BoxedUnit> receive() {
     return ReceiveBuilder
-            .matchAny((message) -> log.info("Received message {}", message))
-            .match(StoreStringMessage.class, this::handleStoreRequest)
+            .match(StoreStringMessage.class, m -> true, this::handleStoreRequest)
             .match(GetStringMessage.class, this::handleGetRequest)
             .matchAny(this::unhandled)
             .build();
@@ -52,7 +50,7 @@ public class WorkerActor extends AbstractActor {
   }
 
   public void handleStoreRequest(StoreStringMessage sr) {
-    log.info("{}: Storing the message", actorId);
+    log.info("{}: Storing the message {}", actorId, sr);
     strings.add(sr.string);
   }
 
@@ -60,10 +58,12 @@ public class WorkerActor extends AbstractActor {
     if (strings.contains(gsm.string)) {
       log.info("{}: I have that string!", actorId);
       sender().tell(new StringMessage(gsm.string), self());
+    } else {
+      log.info("{}: I don't have that string", actorId);
     }
   }
 
-  public static class StoreStringMessage {
+  public static class StoreStringMessage implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private final String string;
@@ -93,7 +93,7 @@ public class WorkerActor extends AbstractActor {
     }
   }
 
-  public static class GetStringMessage {
+  public static class GetStringMessage implements Serializable {
     private static final long serialVersionUID = 1L;
     private final String string;
 

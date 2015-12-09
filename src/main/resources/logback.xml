@@ -6,7 +6,10 @@
     </encoder>
   </appender>
 
-  <root level="DEBUG">
+  <logger name="akka.cluster.ClusterHeartbeatSender" level="OFF"/>
+  <logger name="akka.serialization.Serialization(akka://ClusterSystem)" level="OFF"/>
+
+  <root level="ALL">
     <appender-ref ref="STDOUT"/>
   </root>
 </configuration>

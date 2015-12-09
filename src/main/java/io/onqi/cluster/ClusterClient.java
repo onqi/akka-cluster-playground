@@ -34,16 +34,16 @@ public class ClusterClient {
     String message;
 
     while (!(message = Console.readLine().toString()).isEmpty()) {
-      workerRouter.tell(new WorkerActor.StoreStringMessage(message), ActorRef.noSender());
-      Patterns.ask(workerRouter, new WorkerActor.GetStringMessage(message),
+      WorkerActor.StoreStringMessage msg = new WorkerActor.StoreStringMessage(message);
+      Patterns.ask(workerRouter, msg,
               Timeout.apply(300, TimeUnit.MILLISECONDS))
               .onComplete(new OnComplete<Object>() {
                 @Override
                 public void onComplete(Throwable failure, Object success) throws Throwable {
-                  if (failure != null) {
+                  if (failure == null) {
                     log.info("Got response {}", success);
                   } else {
-                    log.info("Got failure {}", success);
+                    log.info("Got failure {}", failure);
                   }
                 }
               }, system.dispatcher());

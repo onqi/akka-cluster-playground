@@ -1,19 +1,16 @@
 package io.onqi.cluster;
 
-import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
+import akka.actor.UntypedActor;
 import akka.event.Logging;
 import akka.event.LoggingAdapter;
-import akka.japi.pf.ReceiveBuilder;
 import akka.routing.FromConfig;
-import scala.PartialFunction;
-import scala.runtime.BoxedUnit;
 
-public class ClusterParent extends AbstractActor {
+public class ClusterParent extends UntypedActor {
   private LoggingAdapter log = Logging.getLogger(getContext().system(), this);
 
-  private ActorRef workerRouter = getContext().actorOf(FromConfig.getInstance().props(),
+  private ActorRef workerRouter = getContext().actorOf(FromConfig.getInstance().props(WorkerActor.createProps()),
           "workerRouter");
 
   public static Props createProps() {
@@ -21,21 +18,21 @@ public class ClusterParent extends AbstractActor {
   }
 
   @Override
-  public PartialFunction<Object, BoxedUnit> receive() {
-    return ReceiveBuilder
-            .match(WorkerActor.GetStringMessage.class, this::routeGet)
-            .match(WorkerActor.StoreStringMessage.class, this::routeStore)
-            .matchAny(this::unhandled)
-            .build();
+  public void onReceive(Object message) throws Exception {
+    log.info("Got message  {}", message);
+    if (message instanceof WorkerActor.StoreStringMessage) {
+      routeStore((WorkerActor.StoreStringMessage) message);
+    } else {
+      unhandled(message);
+    }
   }
 
-
   private void routeGet(WorkerActor.GetStringMessage message) {
+    workerRouter.tell(message, sender());
     workerRouter.forward(message, context());
   }
 
   private void routeStore(WorkerActor.StoreStringMessage message) {
-    workerRouter.forward(message, context());
-
+    workerRouter.tell(message, sender());
   }
 }
